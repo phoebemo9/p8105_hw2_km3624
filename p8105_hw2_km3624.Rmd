@@ -65,8 +65,42 @@ precip_df =
 left_join(precip_df, month_df, by = "month")
 ```
 
-This dataset contains information of the Mr. Trashwheel trash collector in Baltimore,
-Maryland. The trash collector will record how much trash it collects and stores in a
-dumpster. The dataset provides information of the year, month, and specific kinds of
-trash collected. There are totally `r nrow(trashwheel_df)` rows in the final dataset. There are additional data sheets that include month precipitation data. The total
-precipitation in 2018 is `r sum(pull(precip_2018, total))`. The median number of sports balls in a dumpster in 2017 is `r median(pull(filter(trashwheel_df, year == 2017), sports_balls))`.
+This dataset contains information of the Mr. Trashwheel trash collector in Baltimore, Maryland. The trash collector will record how much trash it collects and stores in a dumpster. The dataset provides information of the year, month, and specific kinds of trash collected. There are totally `r nrow(trashwheel_df)` rows in the final dataset. There are additional data sheets that include month precipitation data. The total precipitation in 2018 is `r sum(pull(precip_2018, total))`. The median number of sports balls in a dumpster in 2017 is `r median(pull(filter(trashwheel_df, year == 2017), sports_balls))`.
+
+## Problem 2
+
+Read the NYC transit dataset
+
+```{r}
+subway_df =
+  read_csv("./data/NYC_Transit_Subway_Entrance_And_Exit_Data.csv") %>%
+  janitor::clean_names() %>%
+  select(line, station_name, station_latitude, station_longitude,
+                   route1:route11, entry, entrance_type, vending, ada) %>%
+  mutate(
+    entry = recode(entry, YES = TRUE, NO = FALSE)
+  )
+```
+
+This dataset contains information about the NYC transit subway stations.
+In the dataset, information including lines, routes, stations and their locations are introduced. I have cleaned the names of each variable, selected major variables we want to look deeper, and changed the character input of entry into logical. I think the dataset is not yet tidy since there are 11 routes that are arranged in an untidy way.
+
+There are `r unique(subway_df) %>% nrow` distinct stations in the dataset, and there are `r filter(subway_df, ada== TRUE) %>% nrow` stations are ADA compliant. The proportion of station entrances/exit without vending allow entrance is: `r unique(subway_df) %>% filter(vending=="NO", entry==TRUE) %>% nrow / unique(subway_df) %>% filter(vending=="NO") %>% nrow`
+
+Now reformat the data so that route number and route name are distinct variables
+
+```{r}
+subway_df =
+  mutate(subway_df, route8 = as.character(route8), route9 =   as.character(route9), route10 = as.character(route10), route11 = as.character(route11))
+
+subway_tidy_df =
+  pivot_longer(
+    subway_df,
+    route1:route11,
+    names_to = "route_name",
+    values_to = "route_number"
+  )
+```
+
+The are `r filter(subway_tidy_df, route_number=="A") %>% unique %>% nrow` distinct stations serve the A train. Of the stations that serve the A train, there are `r filter(subway_tidy_df, route_number=="A") %>% unique %>% filter(ada==TRUE) %>% nrow` of them are ADA compliant.
+
