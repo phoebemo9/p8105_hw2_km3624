@@ -82,9 +82,9 @@ subway_df =
 ```
 
 This dataset contains information about the NYC transit subway stations.
-In the dataset, information including lines, routes, stations and their locations are introduced. There are totally `r nrow(subway_df)` in the final dataset. I have cleaned the names of each variable, selected major variables we want to look deeper, and changed the character input of entry into logical. I think the dataset is not yet tidy since there are 11 routes that are arranged in an untidy way.
+In the dataset, information including lines, routes, stations and their locations are introduced. There are totally `r nrow(subway_df)` rows in the final dataset. I have cleaned the names of each variable, selected major variables we want to look deeper, and changed the character input of entry into logical. I think the dataset is not yet tidy since there are 11 routes that are arranged in an untidy way.
 
-There are `r unique(subway_df) %>% nrow` distinct stations in the dataset, and there are `r filter(subway_df, ada== TRUE) %>% nrow` stations are ADA compliant. The proportion of station entrances/exit without vending allow entrance is: `r unique(subway_df) %>% filter(vending=="NO", entry==TRUE) %>% nrow / unique(subway_df) %>% filter(vending=="NO") %>% nrow`
+There are `r distinct(subway_df, station_name, line, .keep_all=T) %>% nrow` distinct stations in the dataset, and there are `r filter(subway_df, ada==TRUE) %>% distinct(station_name, line) %>% nrow` stations are ADA compliant. The proportion of station entrances/exit without vending allow entrance is: `r filter(subway_df, vending=="NO", entry==TRUE) %>% nrow / filter(subway_df, vending=="NO") %>% nrow`
 
 Now reformat the data so that route number and route name are distinct variables
 
@@ -101,7 +101,7 @@ subway_tidy_df =
   )
 ```
 
-The are `r filter(subway_tidy_df, route_number=="A") %>% unique %>% nrow` distinct stations serve the A train. Of the stations that serve the A train, there are `r filter(subway_tidy_df, route_number=="A") %>% unique %>% filter(ada==TRUE) %>% nrow` of them are ADA compliant.
+The are `r filter(subway_tidy_df, route_number=="A") %>% distinct(station_name, line) %>% nrow` distinct stations serve the A train. Of the stations that serve the A train, there are `r filter(subway_tidy_df, route_number=="A", ada==TRUE) %>% distinct(station_name, line) %>% nrow` of them are ADA compliant.
 
 ## Problem 3
 
@@ -124,3 +124,51 @@ pols_month_df =
   select(-c(prez_gop, prez_dem))
 ```
 
+Second, clean and manipulate data in snp.csv
+
+```{r}
+snp_df =
+  read_csv("./data/snp.csv") %>%
+  janitor::clean_names() %>%
+  separate(date, into = c("month", "day", "year"), sep = "[/]") %>%
+  mutate(month = as.numeric(month)) %>%
+  left_join(month_df, by = "month") %>%
+  select(-c(month,day)) %>%
+  select(year, month_name, everything()) %>%
+  rename(month = month_name)
+```
+
+Third, clean and manipulate data in unemployment.csv
+```{r}
+unemployment_df =
+  read_csv("./data/unemployment.csv")
+
+colnames(unemployment_df) = c("year", month.name)
+
+unemployment_df =
+  pivot_longer(
+    unemployment_df,
+    January:December,
+    names_to = "month",
+    values_to = "unemployment"
+  ) %>%
+  mutate(year = as.character(year))
+```
+
+Join the datasets by merging snp into pols and merge "unemployment" into result
+```{r}
+bind_df =
+  left_join(pols_month_df, snp_df, by = c("year", "month"))
+
+bind_df = left_join(bind_df, unemployment_df, by = c("year", "month"))
+```
+
+The pols_month_df dataset contains information about the number of national politicians
+who are either democratic or republican at a given time. The snp_df dataset contains
+information of the representative measure of stock market (S&P stock index) at a given
+time. The unemployment_df provides information of the unemployment rate at a given
+time. The bind_df, which is a dataset combining information from these three datasets,
+uses years and months as keys to provide the number of national politicians(dem or gop), S&P stock index, and unemployment rates in any given year and month.
+
+There are totally `r nrow(bind_df)` rows and `r ncol(bind_df)` columns in the final
+dataset, and variables include `r names(bind_df)`. The range of years is `r min(pull(bind_df, year))` to `r max(pull(bind_df, year))`. The average S&P stock index in these available years is `r mean(pull(bind_df, close), na.rm = T)` and the average unemployment rate in these available years is `r mean(pull(bind_df, unemployment), na.rm = T)` precent.
