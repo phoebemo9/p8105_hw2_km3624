@@ -60,9 +60,8 @@ month_df =
   )
 
 precip_df =
-  bind_rows(precip_2018, precip_2017)
-
-left_join(precip_df, month_df, by = "month")
+  bind_rows(precip_2018, precip_2017) %>%
+  left_join(month_df, by = "month")
 ```
 
 This dataset contains information of the Mr. Trashwheel trash collector in Baltimore, Maryland. The trash collector will record how much trash it collects and stores in a dumpster. The dataset provides information of the year, month, and specific kinds of trash collected. There are totally `r nrow(trashwheel_df)` rows in the final dataset. There are additional data sheets that include month precipitation data. The total precipitation in 2018 is `r sum(pull(precip_2018, total))`. The median number of sports balls in a dumpster in 2017 is `r median(pull(filter(trashwheel_df, year == 2017), sports_balls))`.
@@ -83,7 +82,7 @@ subway_df =
 ```
 
 This dataset contains information about the NYC transit subway stations.
-In the dataset, information including lines, routes, stations and their locations are introduced. I have cleaned the names of each variable, selected major variables we want to look deeper, and changed the character input of entry into logical. I think the dataset is not yet tidy since there are 11 routes that are arranged in an untidy way.
+In the dataset, information including lines, routes, stations and their locations are introduced. There are totally `r nrow(subway_df)` in the final dataset. I have cleaned the names of each variable, selected major variables we want to look deeper, and changed the character input of entry into logical. I think the dataset is not yet tidy since there are 11 routes that are arranged in an untidy way.
 
 There are `r unique(subway_df) %>% nrow` distinct stations in the dataset, and there are `r filter(subway_df, ada== TRUE) %>% nrow` stations are ADA compliant. The proportion of station entrances/exit without vending allow entrance is: `r unique(subway_df) %>% filter(vending=="NO", entry==TRUE) %>% nrow / unique(subway_df) %>% filter(vending=="NO") %>% nrow`
 
@@ -103,4 +102,25 @@ subway_tidy_df =
 ```
 
 The are `r filter(subway_tidy_df, route_number=="A") %>% unique %>% nrow` distinct stations serve the A train. Of the stations that serve the A train, there are `r filter(subway_tidy_df, route_number=="A") %>% unique %>% filter(ada==TRUE) %>% nrow` of them are ADA compliant.
+
+## Problem 3
+
+First, clean and manipulate data in pols-month.csv
+
+```{r}
+pols_month_df =
+  read_csv("./data/pols-month.csv") %>%
+  janitor::clean_names() %>%
+  separate(mon, into = c("year", "month", "day"), sep = "[-]") %>%
+  mutate(month = as.numeric(month)) %>%
+  left_join(month_df, by = "month") %>%
+  select(-c(month, day)) %>%
+  select(year, month_name, everything()) %>%
+  rename(month = month_name) %>%
+  mutate(
+    president = prez_gop - prez_dem,
+    president = ifelse(president == -1, "dem", "gop")
+  ) %>%
+  select(-c(prez_gop, prez_dem))
+```
 
